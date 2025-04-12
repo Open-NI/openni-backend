@@ -26,21 +26,25 @@ class TextToSpeech:
                 print("Kokoro library not found. Please install it.")
                 return None
 
-        # Generate audio
-        generator = self.pipeline(text, voice=voice)
-        
-        # Collect all audio chunks
-        audio_chunks = []
-        for _, _, audio in generator:
-            audio_chunks.append(audio)
+        try:
+            # Generate audio
+            generator = self.pipeline(text, voice=voice)
             
-        # Concatenate all audio chunks
-        full_audio = np.concatenate(audio_chunks)
-        
-        # Convert to WAV bytes
-        buffer = io.BytesIO()
-        import soundfile as sf
-        sf.write(buffer, full_audio, 24000, format='WAV')
-        buffer.seek(0)
-        
-        return buffer.getvalue() 
+            # Collect all audio chunks
+            audio_chunks = []
+            for _, _, audio in generator:
+                audio_chunks.append(audio)
+                
+            # Concatenate all audio chunks
+            full_audio = np.concatenate(audio_chunks)
+            
+            # Convert to WAV bytes
+            buffer = io.BytesIO()
+            import soundfile as sf
+            sf.write(buffer, full_audio, 24000, format='WAV')
+            buffer.seek(0)
+            
+            return buffer.getvalue() 
+        except Exception as e:
+            print(f"Error in text_to_speech: {str(e)}")
+            return None
