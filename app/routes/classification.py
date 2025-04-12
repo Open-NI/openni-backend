@@ -31,26 +31,43 @@ async def classify_request(
     try:
         logger.debug(f"Received classification request: {request.text}")
         
-        # Get classification from LangGraph
-        classification, response, browser_input = await langgraph_service.classify_text(request.text)
-        logger.debug(f"Classification: {classification}, Response: {response}, Browser Input: {browser_input}")
+        # Process the text through the LangGraph workflow
+        result = await langgraph_service.process_text(request.text)
+        logger.debug(f"LangGraph result: {result}")
+
+        print(result)
         
-        # If classification is browser_use, get search results
-        if classification == "browser_use" and browser_input:
-            try:
-                logger.debug(f"Running browser search for: {browser_input}")
-                browser_result = await browser_service.run_browser(browser_input)
-                logger.debug(f"Browser result: {browser_result}")
-                
-                # Return the browser result directly
+        # Extract the components
+        classification = result.get("classification", "normal_response")
+        response = result.get("response", "")
+        browser_input = result.get("browser_input", "")
+        browser_result = result.get("browser_result", None)
+        
+        # If we have a browser result, use it as the response
+        if browser_result:
+            print(browser_result)
+            logger.debug(f"Using browser result as response")
+            # Check if browser_result is a dictionary with a "result" key
+            if isinstance(browser_result, dict) and "result" in browser_result:
                 return ClassificationResponse(
                     classification=classification,
                     response=browser_result["result"],
                     browser_input=browser_input
                 )
-            except Exception as e:
-                logger.error(f"Error in browser operation: {str(e)}", exc_info=True)
-                raise HTTPException(status_code=500, detail=f"Browser operation failed: {str(e)}")
+            # If it's just a string, use it directly
+            elif isinstance(browser_result, str):
+                return ClassificationResponse(
+                    classification=classification,
+                    response=browser_result,
+                    browser_input=browser_input
+                )
+            # Otherwise, convert to string
+            else:
+                return ClassificationResponse(
+                    classification=classification,
+                    response=str(browser_result),
+                    browser_input=browser_input
+                )
         
         # For non-browser classifications, return the normal response
         return ClassificationResponse(
