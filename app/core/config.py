@@ -23,5 +23,6 @@ class Settings(BaseSettings):
             return ChatOpenAI(model="gpt-3.5-turbo", api_key=self.OPENAI_API_KEY)
         elif self.MODEL_NAME == "gpt-4o":
             return ChatOpenAI(model="gpt-4o", api_key=self.OPENAI_API_KEY)
+        
 
 settings = Settings()
