@@ -153,7 +153,7 @@ async def begin_request(
                 if not result_text:
                     result_text = f"Browser task completed but no specific result was returned: {browser_input or request.request_message}"
 
-                audio_data = render_text_to_speech(response, request.voice)
+                audio_data = render_text_to_speech(result_text, request.voice)
                 action_data["tts_audio_base64"] = audio_data
 
                 # Update status with browser result
