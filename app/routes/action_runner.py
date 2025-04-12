@@ -61,6 +61,7 @@ async def begin_request(
         action_data = {
             "user": request.user,
             "request_message": request.request_message,
+            "voice": request.voice,
             "status": "running",
             "classification": classification,
             "classification_details": {
