@@ -225,6 +225,7 @@ class BrowserService:
                 temperature=0.1,
                 verbose=True
             )
+            planner_llm = ChatOpenAI(model='o3-mini')
             print(f"Using OpenAI model: {model}")
         
         return llm, planner_llm
