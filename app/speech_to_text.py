@@ -61,24 +61,5 @@ class SpeechToText:
         result = self.pipe(audio_path, generate_kwargs=generate_kwargs)
         print(result)
 
-        # API is on localhost:8000/api/v1/classify
-        api_url = "http://localhost:8000/api/v1/action-runner/begin"
-        response = requests.post(api_url, json={
-            "user": "Janez Novak",
-            "request_message": result["text"],
-        })
 
-        if response.status_code == 200:
-            print("Response from API:", response.json())
-        else:
-            print(f"Failed to send data to API. Status code: {response.status_code}, Response: {response.text}")
-
-        response_data = response.json()
-
-        if "task_id" in response_data:
-            task_id = response_data["task_id"]
-            print(f"Received task ID: {task_id}")
-        else:
-            print("No task ID found in the result.")
-
-        return result["text"], response_data
+        return result["text"]
