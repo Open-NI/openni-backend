@@ -92,19 +92,22 @@ class BrowserService:
             return
             
         try:
-            # Configure browser based on operating system
-            system = platform.system()
-            if system == "Darwin":  # macOS
-                brave_path = "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
-            elif system == "Windows":
-                brave_path = "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
-            else:  # Linux and others
-                brave_path = "/usr/bin/brave-browser"
-                
+            browser_path = os.getenv("BROWSER_PATH")
+
+            if not browser_path or len(browser_path) == 0:
+                # Configure browser based on operating system
+                system = platform.system()
+                if system == "Darwin":  # macOS
+                    browser_path = "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+                elif system == "Windows":
+                    browser_path = "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+                else:  # Linux and others
+                    browser_path = "/usr/bin/brave-browser"
+
             # Create browser configuration
             self.browser = Browser(
                 config=BrowserConfig(
-                    chrome_instance_path=brave_path
+                    chrome_instance_path=browser_path
                 )
             )
             
