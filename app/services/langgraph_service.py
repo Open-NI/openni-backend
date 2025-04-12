@@ -92,6 +92,7 @@ class LangGraphService:
         self.response_prompt = ChatPromptTemplate.from_messages([
             ("system", """You are a helpful assistant. Provide a clear, informative, and helpful response to the user's query.
             Be concise but thorough. If you don't know something, say so rather than making up information.
+            Your responses MUST be extremely brief and concise. Use 30 completion_tokens or less. Focus only on the most essential information. No explanations, no context, no elaboration. Just the direct answer.
             """),
             ("human", "{text}")
         ])
@@ -336,10 +337,14 @@ class LangGraphService:
     
     async def _generate_response(self, text: str) -> str:
         """Generate a response for the input text using the language model."""
-        response = self.llm.invoke([
-            {"role": "system", "content": "You are a helpful assistant. Provide a clear, concise, and brief response. Avoid unnecessary elaboration and get straight to the point. Keep responses under 2-3 sentences when possible."},
-            {"role": "user", "content": text}
-        ])
+
+        response = self.llm.invoke(
+            [
+                {"role": "system", "content": "You are a helpful assistant. Your responses MUST be extremely brief and concise. Focus only on the most essential information. No explanations, no context, no elaboration. Just the direct answer."},
+                {"role": "user", "content": text}
+            ],
+            max_tokens=20
+        )
         return response.content
     
     def _generate_browser_input(self, text: str) -> str:
