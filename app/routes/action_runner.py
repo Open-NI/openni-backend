@@ -107,8 +107,10 @@ async def begin_request(
                 # Run browser task directly
                 browser_result = await browser_service.run_browser(browser_input or request.request_message)
                 print(f"Browser result: {browser_result}")
+                
                 # Extract the result from the browser response
                 result_text = browser_result.get("result", "")
+                
                 if not result_text and isinstance(browser_result, dict):
                     # Try to extract from different possible locations in the response
                     if "extracted_content" in browser_result:
@@ -122,7 +124,7 @@ async def begin_request(
                 if not result_text:
                     result_text = f"Browser task completed but no specific result was returned: {browser_input or request.request_message}"
                 
-                # Update status with browser result
+                # Update status with browser result and model thoughts
                 await mongodb_service.update_action_status(
                     action_id=action_id,
                     status="completed",
