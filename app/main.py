@@ -4,6 +4,7 @@ from app.routes import classification
 from app.routes import browser_use
 from app.routes import action_runner
 from app.routes import summarizer
+from app.routes import human
 #from app.routes.speech_to_text import router as speech_router
 
 app = FastAPI(
@@ -17,6 +18,7 @@ app.include_router(classification.router)
 app.include_router(browser_use.router)
 app.include_router(action_runner.router)
 app.include_router(summarizer.router)
+app.include_router(human.router)
 
 # Add WebSocket endpoint
 #@app.websocket("/ws/speech-to-text")
