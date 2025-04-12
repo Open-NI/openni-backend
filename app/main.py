@@ -15,7 +15,7 @@ app = FastAPI(
 )
 
 # Mount static files
-app.mount("/audio", StaticFiles(directory="./audio"), name="audio")
+app.mount("/api/v1/audio", StaticFiles(directory="./audio"), name="audio")
 
 # Include routers
 app.include_router(classification.router)
