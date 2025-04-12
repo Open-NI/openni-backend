@@ -7,6 +7,9 @@ from openai import OpenAI
 from langgraph.graph import Graph, StateGraph
 from langchain_core.messages import HumanMessage, AIMessage
 from app.speech_to_text import SpeechToText
+from app.text_to_speech import TextToSpeech
+from fastapi.responses import StreamingResponse
+import io
 
 # Load environment variables
 load_dotenv()
@@ -14,8 +17,9 @@ load_dotenv()
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Initialize SpeechToText
+# Initialize SpeechToText and TextToSpeech
 speech_to_text = SpeechToText()
+text_to_speech = TextToSpeech()
 
 # Define the classification labels
 ClassificationLabel = Literal["browser_use", "normal_response", "api_actions"]
@@ -106,6 +110,23 @@ async def transcribe_audio(
         os.remove(temp_path)
         
         return SpeechToTextResponse(text=text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/text-to-speech")
+async def convert_text_to_speech(text: str, voice: Optional[str] = 'en_heart'):
+    try:
+        # Convert text to speech
+        audio_data = text_to_speech.text_to_speech(text, voice)
+        
+        # Return the audio file
+        return StreamingResponse(
+            io.BytesIO(audio_data),
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "attachment; filename=speech.mp3"
+            }
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
