@@ -2,5 +2,5 @@
 .venv/
 venv/
 __pycache__/
-./audio/*
-!./audio/.gitkeep
+/audio/*
+!/audio/.gitkeep
