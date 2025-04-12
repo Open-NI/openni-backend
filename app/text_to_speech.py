@@ -20,6 +20,8 @@ class TextToSpeech:
             bytes: WAV audio data
         """
 
+        print(f'Converting text to speech (voice: {voice}): "{text}"')
+
         if not self.pipeline:
             try:
                 from kokoro import KPipeline
@@ -47,6 +49,9 @@ class TextToSpeech:
             buffer.seek(0)
             filename = f"{uuid.uuid4()}.wav"
             self.save_to_file(buffer.getvalue(), directory='audio', filename=filename)
+
+            print(f"TTS audio saved to {filename}")
+
             return filename
         except Exception as e:
             print(f"Error in text_to_speech: {str(e)}")

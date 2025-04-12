@@ -24,6 +24,10 @@ def get_browser_service():
     """Dependency injection for BrowserService."""
     return BrowserService()
 
+def render_text_to_speech(text, voice):
+    audio_file_path = text_to_speech.text_to_speech(text, voice)
+    return audio_file_path
+
 @router.post("/begin", response_model=ActionRunnerBeginResponse)
 async def begin_request(
     request: ActionRunnerBeginRequest,
@@ -86,7 +90,11 @@ async def begin_request(
             # Generate a response if not already provided
             if not response:
                 response = await langgraph_service._generate_response(request.request_message)
-            audio_data = text_to_speech.text_to_speech(response, request.voice)
+
+            print(f'Response: {response}')
+
+            audio_data = render_text_to_speech(response, request.voice)
+            action_data["tts_audio_base64"] = audio_data
 
             #tts_audio_base64 = base64.b64encode(tts_audio).decode('utf-8') if tts_audio else None
 
@@ -127,12 +135,10 @@ async def begin_request(
                 
                 # If we still don't have a result, use a fallback
                 if not result_text:
-                    result_text = f"Browser task completed but no specific result was returned: {browser_input or request.request_message}"
-                
+                    result_text = f"Browser task completed but no specific result was returned: {browser_input or request.request_message}"                
 
-
-                audio_data = text_to_speech.text_to_speech(result_text, request.voice)
-                
+                audio_data = render_text_to_speech(response, request.voice)
+                action_data["tts_audio_base64"] = audio_data
 
                 # Update status with browser result
                 await mongodb_service.update_action_status(
@@ -163,8 +169,9 @@ async def begin_request(
                 if api_action and api_action in API_ACTION_HANDLERS:
                     action_result = API_ACTION_HANDLERS[api_action](**(api_params or {}))
                     result_text = str(action_result)
-                    
-                    audio_data = text_to_speech.text_to_speech(result_text, request.voice)
+
+                    audio_data = render_text_to_speech(response, request.voice)
+                    action_data["tts_audio_base64"] = audio_data
 
                     await mongodb_service.update_action_status(
                         action_id=action_id,
