@@ -35,6 +35,10 @@ class ClassificationResponse(BaseModel):
 class SpeechToTextResponse(BaseModel):
     text: str
 
+class TextToSpeechRequest(BaseModel):
+    text: str
+    voice: Optional[str] = 'af_heart'
+
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -114,17 +118,17 @@ async def transcribe_audio(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/text-to-speech")
-async def convert_text_to_speech(text: str, voice: Optional[str] = 'en_heart'):
+async def convert_text_to_speech(request: TextToSpeechRequest):
     try:
         # Convert text to speech
-        audio_data = text_to_speech.text_to_speech(text, voice)
+        audio_data = text_to_speech.text_to_speech(request.text, request.voice)
         
         # Return the audio file
         return StreamingResponse(
             io.BytesIO(audio_data),
-            media_type="audio/mpeg",
+            media_type="audio/wav",
             headers={
-                "Content-Disposition": "attachment; filename=speech.mp3"
+                "Content-Disposition": "attachment; filename=speech.wav"
             }
         )
     except Exception as e:

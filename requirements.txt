@@ -11,3 +11,5 @@ browser-use==0.1.40
 transformers==4.38.2
 accelerate==1.6.0
 python-multipart==0.0.20
+kokoro==0.9.4
+soundfile==0.13.1
