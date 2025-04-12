@@ -51,6 +51,9 @@ async def convert_text_to_speech(request: TextToSpeechRequest):
     try:
         # Convert text to speech
         audio_data = text_to_speech.text_to_speech(request.text, request.voice)
+
+        if audio_data is None:
+            raise HTTPException(status_code=500, detail="Error generating audio")
         
         # Return the audio file
         return StreamingResponse(

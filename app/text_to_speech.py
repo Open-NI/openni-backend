@@ -19,8 +19,12 @@ class TextToSpeech:
         """
 
         if not self.pipeline:
-            from kokoro import KPipeline
-            self.pipeline = KPipeline(lang_code='a')
+            try:
+                from kokoro import KPipeline
+                self.pipeline = KPipeline(lang_code='a')
+            except ImportError:
+                print("Kokoro library not found. Please install it.")
+                return None
 
         # Generate audio
         generator = self.pipeline(text, voice=voice)
