@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Optional
 
 # Define the classification labels
 ClassificationLabel = Literal["browser_use", "normal_response", "api_actions"]
@@ -11,4 +11,4 @@ class ClassificationRequest(BaseModel):
 class ClassificationResponse(BaseModel):
     """Response model for text classification."""
     classification: ClassificationLabel
-    explanation: str 
+    response: Optional[str] = None

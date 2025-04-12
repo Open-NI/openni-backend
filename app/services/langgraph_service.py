@@ -11,15 +11,15 @@ class LangGraphService:
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = settings.MODEL_NAME
     
-    def classify_text(self, text: str) -> ClassificationLabel:
+    def classify_text(self, text: str) -> tuple[ClassificationLabel, str | None]:
         """
-        Classify the input text using OpenAI's GPT model.
+        Classify the input text using OpenAI's GPT model and generate response if needed.
         
         Args:
             text: The text to classify
             
         Returns:
-            ClassificationLabel: The classification result
+            tuple[ClassificationLabel, str | None]: The classification result and optional response
             
         Raises:
             HTTPException: If the classification is invalid
@@ -47,4 +47,30 @@ class LangGraphService:
         if classification not in ["browser_use", "normal_response", "api_actions"]:
             raise HTTPException(status_code=500, detail="Invalid classification from LLM")
         
-        return classification 
+        # Generate response for normal_response classification
+        llm_response = None
+        if classification == "normal_response":
+            llm_response = self._generate_response(text)
+        
+        return classification, llm_response
+    
+    def _generate_response(self, text: str) -> str:
+        """
+        Generate a response for the input text.
+        
+        Args:
+            text: The input text
+            
+        Returns:
+            str: The generated response
+        """
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant. Provide a clear and concise response to the user's request."},
+                {"role": "user", "content": text}
+            ],
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content.strip() 
