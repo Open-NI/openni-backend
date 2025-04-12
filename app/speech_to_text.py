@@ -1,11 +1,13 @@
-from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 import torch
 from typing import Optional
 import platform
 import requests
 
 class SpeechToText:
+
     def __init__(self):
+        from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+        
         # Check if we're on macOS and Metal is available
         is_mac = platform.system() == "Darwin"
         has_metal = torch.backends.mps.is_available() if is_mac else False

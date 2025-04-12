@@ -1,13 +1,11 @@
-from kokoro import KPipeline
-import soundfile as sf
 import numpy as np
 import io
 from typing import Optional
 
 class TextToSpeech:
     def __init__(self):
-        self.pipeline = KPipeline(lang_code='a')
-        
+        self.pipeline = None
+
     def text_to_speech(self, text: str, voice: Optional[str] = 'af_heart') -> bytes:
         """
         Convert text to speech using Kokoro-82M model
@@ -19,6 +17,11 @@ class TextToSpeech:
         Returns:
             bytes: WAV audio data
         """
+
+        if not self.pipeline:
+            from kokoro import KPipeline
+            self.pipeline = KPipeline(lang_code='a')
+
         # Generate audio
         generator = self.pipeline(text, voice=voice)
         
@@ -32,6 +35,7 @@ class TextToSpeech:
         
         # Convert to WAV bytes
         buffer = io.BytesIO()
+        import soundfile as sf
         sf.write(buffer, full_audio, 24000, format='WAV')
         buffer.seek(0)
         
