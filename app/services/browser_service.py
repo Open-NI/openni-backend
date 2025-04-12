@@ -63,7 +63,7 @@ class BrowserService:
         self.agent = None
         self.browser = None
         self.retry_delay = 2  # Delay in seconds between retries
-        self.llm, self.planner_llm = self.get_llm(settings.get('MODEL_NAME', 'gpt-4o'))
+        self.llm, self.planner_llm = self.get_llm(settings, model=settings.MODEL_NAME)
         self.is_initialized = False
         
     async def initialize(self):
@@ -181,8 +181,7 @@ class BrowserService:
         except Exception as e:
             logger.error(f"Error closing browser service: {str(e)}", exc_info=True) 
 
-        
-    async def get_llm(model: str = 'gpt-4o') -> tuple[Optional[ChatOpenAI], Optional[ChatOpenAI]]:
+    def get_llm(self, settings, model: str = 'gpt-4o') -> tuple[Optional[ChatOpenAI], Optional[ChatAnthropic]]:
         """Get LLM instances based on the specified model."""
         llm = None
         planner_llm = None
