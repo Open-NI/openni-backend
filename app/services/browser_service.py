@@ -193,6 +193,7 @@ class BrowserService:
                 api_key=SecretStr(os.getenv('DEEPSEEK_API_KEY', '')),
                 verbose=True
             )
+            print("Using DeepSeek v3")
         elif model == 'anthropic':
             llm = ChatAnthropic(
                 model_name="claude-3-5-sonnet-20240620",
@@ -200,6 +201,7 @@ class BrowserService:
                 timeout=100,
                 verbose=True,
             )
+            print("Using Anthropic Claude 3")
         elif model == 'gpt-3.5-turbo':
             llm = ChatOpenAI(
                 model="gpt-3.5-turbo",
@@ -207,6 +209,7 @@ class BrowserService:
                 verbose=True
             )
             planner_llm = ChatOpenAI(model='o3-mini')
+            print("Using GPT-3.5 Turbo, with O3 Mini planner")
         elif model == 'gpt-4o':
             llm = ChatOpenAI(
                 model="gpt-4o",
@@ -214,5 +217,14 @@ class BrowserService:
                 verbose=True
             )
             planner_llm = ChatOpenAI(model='o3-mini')
+            print("Using GPT-4o, with O3 Mini planner")
+        else:
+            # We try to use openai
+            llm = ChatOpenAI(
+                model=model,
+                temperature=0.1,
+                verbose=True
+            )
+            print(f"Using OpenAI model: {model}")
         
         return llm, planner_llm
