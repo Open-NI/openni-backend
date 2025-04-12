@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from app.models.action_runner import ActionRunnerBeginRequest, ActionRunnerStatusResponse, ActionRunnerBeginResponse
 from app.models.classification import ClassificationRequest, ClassificationResponse
-from app.services.langgraph_service import LangGraphService
+from app.services.langgraph_service import LangGraphService, API_ACTION_HANDLERS
 from app.services.mongodb_service import mongodb_service
 from app.services.browser_service import BrowserService
 from bson import ObjectId
@@ -80,6 +80,10 @@ async def begin_request(
         # Handle different classification types
         if classification == "normal_response":
             logger.info(f"Completing normal response for action {action_id}")
+            # Generate a response if not already provided
+            if not response:
+                response = await langgraph_service._generate_response(request.request_message)
+                
             await mongodb_service.update_action_status(
                 action_id=action_id,
                 status="completed",
@@ -142,16 +146,18 @@ async def begin_request(
             logger.info(f"Executing API action for action {action_id}")
             try:
                 # Execute the API action
-                if api_action and api_action in API_ACTIONS:
-                    action_result = API_ACTIONS[api_action](**(api_params or {}))
+                if api_action and api_action in API_ACTION_HANDLERS:
+                    action_result = API_ACTION_HANDLERS[api_action](**(api_params or {}))
+                    result_text = str(action_result)
+                    
                     await mongodb_service.update_action_status(
                         action_id=action_id,
                         status="completed",
-                        result=str(action_result),
+                        result=result_text,
                         explanation=f"API action {api_action} executed successfully"
                     )
                     action_data["status"] = "completed"
-                    action_data["result"] = str(action_result)
+                    action_data["result"] = result_text
                 else:
                     raise ValueError(f"Unknown API action: {api_action}")
             except Exception as e:
@@ -165,9 +171,11 @@ async def begin_request(
                 action_data["status"] = "failed"
                 action_data["error_message"] = str(e)
         
+        # Return the response with the appropriate result
         return ActionRunnerBeginResponse(
             classification=action_data["classification"],
             status=action_data["status"],
+            response=action_data.get("result"),  # Include the result in the response
             explanation=action_data["explanation"],
             action_id=action_id
         )
