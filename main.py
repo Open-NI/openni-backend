@@ -1,18 +1,21 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Optional
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
 from langgraph.graph import Graph, StateGraph
-from langgraph.prebuilt import ToolExecutor
 from langchain_core.messages import HumanMessage, AIMessage
+from app.speech_to_text import SpeechToText
 
 # Load environment variables
 load_dotenv()
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Initialize SpeechToText
+speech_to_text = SpeechToText()
 
 # Define the classification labels
 ClassificationLabel = Literal["browser_use", "normal_response", "api_actions"]
@@ -24,6 +27,9 @@ class ClassificationRequest(BaseModel):
 class ClassificationResponse(BaseModel):
     classification: ClassificationLabel
     explanation: str
+
+class SpeechToTextResponse(BaseModel):
+    text: str
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -78,6 +84,28 @@ async def classify_request(request: ClassificationRequest):
             classification=classification,
             explanation=explanation
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/speech-to-text", response_model=SpeechToTextResponse)
+async def transcribe_audio(
+    file: UploadFile = File(...),
+    language: Optional[str] = None
+):
+    try:
+        # Save the uploaded file temporarily
+        temp_path = f"temp_{file.filename}"
+        with open(temp_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Transcribe the audio
+        text = speech_to_text.transcribe(temp_path, language)
+        
+        # Clean up the temporary file
+        os.remove(temp_path)
+        
+        return SpeechToTextResponse(text=text)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
