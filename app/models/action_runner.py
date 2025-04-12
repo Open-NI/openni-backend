@@ -8,6 +8,7 @@ class ActionRunnerBeginRequest(BaseModel):
     """Request model for action runner begin."""
     user: str
     request_message: str
+    voice: str
 
 class ActionRunnerBeginResponse(BaseModel):
     """Response model for action runner begin."""
