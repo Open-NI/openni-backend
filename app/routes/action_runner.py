@@ -86,16 +86,16 @@ async def begin_request(
             # Generate a response if not already provided
             if not response:
                 response = await langgraph_service._generate_response(request.request_message)
-            
-            tts_audio = text_to_speech.text_to_speech(response, request.voice)
-            tts_audio_base64 = base64.b64encode(tts_audio).decode('utf-8') if tts_audio else None
+            audio_data = text_to_speech.text_to_speech(response, request.voice)
+
+            #tts_audio_base64 = base64.b64encode(tts_audio).decode('utf-8') if tts_audio else None
 
             await mongodb_service.update_action_status(
                 action_id=action_id,
                 status="completed",
                 result=response,
                 explanation="Request completed with normal response",
-                tts_audio_base64=tts_audio_base64
+                tts_audio_base64=audio_data
             )
 
             action_data["status"] = "completed"
@@ -129,8 +129,10 @@ async def begin_request(
                 if not result_text:
                     result_text = f"Browser task completed but no specific result was returned: {browser_input or request.request_message}"
                 
-                tts_audio = text_to_speech.text_to_speech(response, request.voice)
-                tts_audio_base64 = base64.b64encode(tts_audio).decode('utf-8') if tts_audio else None
+
+
+                audio_data = text_to_speech.text_to_speech(result_text, request.voice)
+                
 
                 # Update status with browser result
                 await mongodb_service.update_action_status(
@@ -138,7 +140,7 @@ async def begin_request(
                     status="completed",
                     result=result_text,
                     explanation="Browser task completed successfully",
-                    tts_audio_base64=tts_audio_base64
+                    tts_audio_base64=audio_data
                 )
                 action_data["status"] = "completed"
                 action_data["result"] = result_text
@@ -162,15 +164,14 @@ async def begin_request(
                     action_result = API_ACTION_HANDLERS[api_action](**(api_params or {}))
                     result_text = str(action_result)
                     
-                    tts_audio = text_to_speech.text_to_speech(response, request.voice)
-                    tts_audio_base64 = base64.b64encode(tts_audio).decode('utf-8') if tts_audio else None
+                    audio_data = text_to_speech.text_to_speech(result_text, request.voice)
 
                     await mongodb_service.update_action_status(
                         action_id=action_id,
                         status="completed",
                         result=result_text,
                         explanation=f"API action {api_action} executed successfully",
-                        tts_audio_base64=tts_audio_base64
+                        tts_audio_base64=audio_data
                     )
                     action_data["status"] = "completed"
                     action_data["result"] = result_text
