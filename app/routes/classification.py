@@ -14,25 +14,22 @@ async def classify_request(
     langgraph_service: LangGraphService = Depends(get_langgraph_service)
 ):
     """
-    Classify the input text and provide an explanation.
+    Classify the input text.
     
     Args:
         request: The classification request
         langgraph_service: The LangGraph service
         
     Returns:
-        ClassificationResponse: The classification result with explanation
+        ClassificationResponse: The classification result
         
     Raises:
         HTTPException: If there's an error during classification
     """
     try:
         classification = langgraph_service.classify_text(request.text)
-        explanation = langgraph_service.generate_explanation(request.text, classification)
-        
         return ClassificationResponse(
-            classification=classification,
-            explanation=explanation
+            classification=classification
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

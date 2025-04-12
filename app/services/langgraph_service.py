@@ -47,28 +47,4 @@ class LangGraphService:
         if classification not in ["browser_use", "normal_response", "api_actions"]:
             raise HTTPException(status_code=500, detail="Invalid classification from LLM")
         
-        return classification
-    
-    def generate_explanation(self, text: str, classification: ClassificationLabel) -> str:
-        """
-        Generate an explanation for the classification.
-        
-        Args:
-            text: The original text
-            classification: The classification result
-            
-        Returns:
-            str: The explanation for the classification
-        """
-        explanation_prompt = f"""Explain why the text "{text}" was classified as "{classification}".
-        Keep the explanation concise and clear."""
-        
-        explanation_response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "user", "content": explanation_prompt}
-            ],
-            temperature=0.7
-        )
-        
-        return explanation_response.choices[0].message.content.strip() 
+        return classification 
