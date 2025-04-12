@@ -21,12 +21,11 @@ def get_browser_service():
 @router.post("/classify", response_model=ClassificationResponse)
 async def classify_request(
     request: ClassificationRequest,
-    langgraph_service: LangGraphService = Depends(get_langgraph_service),
-    browser_service: BrowserService = Depends(get_browser_service)
+    langgraph_service: LangGraphService = Depends(get_langgraph_service)
 ):
     """
     Classify the input text and return a response.
-    If the classification is 'browser_use', the response will include search results.
+    If the classification is 'browser_use', the response will include the enhanced search query.
     """
     try:
         logger.debug(f"Received classification request: {request.text}")
@@ -34,42 +33,13 @@ async def classify_request(
         # Process the text through the LangGraph workflow
         result = await langgraph_service.process_text(request.text)
         logger.debug(f"LangGraph result: {result}")
-
-        print(result)
         
         # Extract the components
         classification = result.get("classification", "normal_response")
         response = result.get("response", "")
         browser_input = result.get("browser_input", "")
-        browser_result = result.get("browser_result", None)
         
-        # If we have a browser result, use it as the response
-        if browser_result:
-            print(browser_result)
-            logger.debug(f"Using browser result as response")
-            # Check if browser_result is a dictionary with a "result" key
-            if isinstance(browser_result, dict) and "result" in browser_result:
-                return ClassificationResponse(
-                    classification=classification,
-                    response=browser_result["result"],
-                    browser_input=browser_input
-                )
-            # If it's just a string, use it directly
-            elif isinstance(browser_result, str):
-                return ClassificationResponse(
-                    classification=classification,
-                    response=browser_result,
-                    browser_input=browser_input
-                )
-            # Otherwise, convert to string
-            else:
-                return ClassificationResponse(
-                    classification=classification,
-                    response=str(browser_result),
-                    browser_input=browser_input
-                )
-        
-        # For non-browser classifications, return the normal response
+        # Return the classification response
         return ClassificationResponse(
             classification=classification,
             response=response,

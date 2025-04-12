@@ -220,46 +220,20 @@ class LangGraphService:
             try:
                 # Get the input text
                 text = state.get("text", "")
-                logger.debug(f"Using raw text for browser query: {text}")
+                logger.debug(f"Enhancing browser query for: {text}")
                 
-                # Comment out the enhancement logic and use raw text directly
-                # messages = self.browser_prompt.format_messages(text=text)
-                # response = self.llm.invoke(messages)
+                # Generate enhanced browser query from LLM
+                messages = self.browser_prompt.format_messages(text=text)
+                response = self.llm.invoke(messages)
                 
-                # Update state with browser input (using raw text)
-                state["browser_input"] = text
-                logger.debug(f"Using raw browser query: {state['browser_input']}")
+                # Update state with enhanced browser query
+                state["browser_input"] = response.content.strip()
+                logger.debug(f"Enhanced browser query: {state['browser_input']}")
                 return state
                 
             except Exception as e:
-                logger.error(f"Error in browser query node: {str(e)}", exc_info=True)
+                logger.error(f"Error in browser query enhancement: {str(e)}", exc_info=True)
                 state["browser_input"] = text  # Fallback to original text
-                return state
-        
-        # Define the browser execution node
-        async def browser_execution_node(state: GraphState) -> GraphState:
-            try:
-                # Get the browser input
-                browser_input = state.get("browser_input", "")
-                logger.debug(f"Executing browser search for: {browser_input}")
-                
-                # Run the browser service - properly await the async call
-                browser_result = await self.browser_service.run_browser(browser_input)
-                
-                # Check if the result indicates a login popup or paywall
-                if isinstance(browser_result, str) and any(term in browser_result.lower() for term in ["login", "sign in", "paywall", "subscription", "subscribe"]):
-                    logger.info("Login popup or paywall detected, ending search")
-                    state["browser_result"] = "The search encountered a login popup or paywall. The content requires authentication to access."
-                    return state
-                
-                # Update state with browser result
-                state["browser_result"] = browser_result
-                logger.debug(f"Browser result: {state['browser_result']}")
-                return state
-                
-            except Exception as e:
-                logger.error(f"Error in browser execution: {str(e)}", exc_info=True)
-                state["browser_result"] = "I apologize, but I encountered an error while searching for information."
                 return state
         
         # Define the router function
@@ -270,7 +244,9 @@ class LangGraphService:
             if classification == "normal_response":
                 return "generate_response"
             elif classification == "browser_use":
-                return "browser_query"
+                # For browser_use, we'll just return the enhanced query without executing it
+                logger.debug("Browser use detected, returning enhanced query without execution")
+                return END
             elif classification == "api_actions":
                 # For API actions, we've already executed the action in the classification node
                 # and set the response, so we can end the graph
@@ -287,7 +263,6 @@ class LangGraphService:
         workflow.add_node("classify", classify_node)
         workflow.add_node("generate_response", generate_response_node)
         workflow.add_node("browser_query", browser_query_node)
-        workflow.add_node("browser_execution", browser_execution_node)
         
         # Add conditional edges
         workflow.add_conditional_edges(
@@ -301,8 +276,7 @@ class LangGraphService:
         )
         
         # Add edges
-        workflow.add_edge("browser_query", "browser_execution")
-        workflow.add_edge("browser_execution", END)
+        workflow.add_edge("browser_query", END)
         workflow.add_edge("generate_response", END)
         
         # Set entry point
@@ -330,19 +304,16 @@ class LangGraphService:
             # Extract results
             classification = final_state.get("classification", "normal_response")
             response = final_state.get("response", "")
-            browser_result = final_state.get("browser_result", None)
+            browser_input = final_state.get("browser_input", "")
             api_action = final_state.get("api_action", None)
             api_params = final_state.get("api_params", None)
             
             # Prepare result
             result = {
                 "classification": classification,
-                "response": response
+                "response": response,
+                "browser_input": browser_input
             }
-            
-            # Add browser result if available
-            if browser_result:
-                result["browser_result"] = browser_result
             
             # Add API action and parameters if available
             if api_action:
