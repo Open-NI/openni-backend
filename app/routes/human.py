@@ -56,12 +56,6 @@ async def convert_text_to_speech(request: TextToSpeechRequest):
             raise HTTPException(status_code=500, detail="Error generating audio")
         
         # Return the audio file
-        return StreamingResponse(
-            io.BytesIO(audio_data),
-            media_type="audio/wav",
-            headers={
-                "Content-Disposition": "attachment; filename=speech.wav"
-            }
-        )
+        return 'http://192.168.0.100:8000/api/v1/audio/' + audio_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

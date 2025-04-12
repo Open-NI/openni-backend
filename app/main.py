@@ -1,4 +1,5 @@
 from fastapi import FastAPI, WebSocket
+from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.routes import classification
 from app.routes import browser_use
@@ -12,6 +13,9 @@ app = FastAPI(
     description="API for classifying text using LangGraph and OpenAI",
     version="1.0.0"
 )
+
+# Mount static files
+app.mount("/api/v1/audio", StaticFiles(directory="./audio"), name="audio")
 
 # Include routers
 app.include_router(classification.router)
