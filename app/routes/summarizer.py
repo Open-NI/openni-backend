@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+from app.routes.human import text_to_speech
 from app.services.langgraph_service import LangGraphService
 import logging
 
@@ -15,10 +16,12 @@ class SummarizerRequest(BaseModel):
     """Request model for text summarization."""
     text: str
     max_tts_words: Optional[int] = 50  # Target word count for TTS summary
+    voice: Optional[str] = 'af_heart'  # Default voice for TTS
 
 class SummarizerResponse(BaseModel):
     """Response model for text summarization."""
     tts_summary: str  # Concise summary for text-to-speech (10-20 seconds)
+    tts_audio: Optional[bytes] = None  # Audio data for TTS summary
     detailed_summary: str  # Broader summary for HTML display
     error: Optional[str] = None
 
@@ -86,10 +89,16 @@ async def summarize_text(
         
         logger.debug(f"Generated TTS summary with {len(tts_summary.split())} words")
         logger.debug(f"Generated detailed summary with {len(detailed_summary.split())} words")
+
+        voice_audio = text_to_speech.text_to_speech(
+            text=tts_summary,
+            voice=request.voice
+        )
         
         return SummarizerResponse(
             tts_summary=tts_summary,
-            detailed_summary=detailed_summary
+            detailed_summary=detailed_summary,
+            tts_audio=voice_audio,
         )
         
     except Exception as e:
