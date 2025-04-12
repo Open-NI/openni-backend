@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from app.core.config import settings
 from app.routes import classification
+from app.routes.speech_to_text import router as speech_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -10,6 +11,11 @@ app = FastAPI(
 
 # Include routers
 app.include_router(classification.router)
+
+# Add WebSocket endpoint
+@app.websocket("/ws/speech-to-text")
+async def websocket_endpoint(websocket: WebSocket):
+    await speech_router.handle_websocket(websocket)
 
 @app.get("/")
 async def root():
