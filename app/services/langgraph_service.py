@@ -334,22 +334,13 @@ class LangGraphService:
                 "response": "I apologize, but I encountered an error processing your request."
             }
     
-    def _generate_response(self, text: str) -> str:
-        """
-        Generate a response for the input text.
-        
-        Args:
-            text: The input text
-            
-        Returns:
-            str: The generated response
-        """
+    async def _generate_response(self, text: str) -> str:
+        """Generate a response for the input text using the language model."""
         response = self.llm.invoke([
-            {"role": "system", "content": "You are a helpful assistant. Provide a clear and concise response to the user's request."},
+            {"role": "system", "content": "You are a helpful assistant. Provide a clear, concise, and brief response. Avoid unnecessary elaboration and get straight to the point. Keep responses under 2-3 sentences when possible."},
             {"role": "user", "content": text}
         ])
-        
-        return response.content.strip()
+        return response.content
     
     def _generate_browser_input(self, text: str) -> str:
         """
