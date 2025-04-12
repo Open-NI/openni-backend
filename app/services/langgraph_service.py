@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph, END
 from typing import Dict, List, Tuple, Optional, Any, TypedDict, Annotated, Literal
 from app.core.config import settings
 from app.models.classification import ClassificationLabel
+from app.models.assistant import AssistantVoice
 from fastapi import HTTPException
 import logging
 import json
@@ -44,6 +45,7 @@ API_ACTION_HANDLERS = {
 class GraphState(TypedDict):
     """State schema for the classification graph."""
     text: str
+    voice: Optional[str]
     classification: Optional[str]
     response: Optional[str]
     browser_input: Optional[str]
@@ -92,7 +94,7 @@ class LangGraphService:
         self.response_prompt = ChatPromptTemplate.from_messages([
             ("system", """You are a helpful assistant. Provide a clear, informative, and helpful response to the user's query.
             Be concise but thorough. If you don't know something, say so rather than making up information.
-            Your responses MUST be extremely brief and concise. Use 30 completion_tokens or less. Focus only on the most essential information. No explanations, no context, no elaboration. Just the direct answer.
+
             """),
             ("human", "{text}")
         ])
@@ -114,6 +116,7 @@ class LangGraphService:
             
             Input: "latest iPhone price"
             Output: "iPhone 15 Pro Max current retail price US market 2024"
+            
             """),
             ("human", "{text}")
         ])
@@ -196,24 +199,22 @@ class LangGraphService:
                 return state
         
         # Define the response generation node
-        def generate_response_node(state: GraphState) -> GraphState:
+        async def generate_response_node(state: GraphState) -> GraphState:
+            """Generate a response for the input text."""
             try:
-                # Get the input text
+                # Get the input text and voice
                 text = state.get("text", "")
-                logger.debug(f"Generating response for: {text}")
+                voice = state.get("voice", "af_heart")
                 
-                # Generate response from LLM
-                messages = self.response_prompt.format_messages(text=text)
-                response = self.llm.invoke(messages)
-                
+                # Generate response using the language model with voice personalization
+                response = await self._generate_response(text, voice)
+
                 # Update state with response
-                state["response"] = response.content.strip()
-                logger.debug(f"Generated response: {state['response']}")
+                state["response"] = response
                 return state
-                
             except Exception as e:
-                logger.error(f"Error in response generation: {str(e)}", exc_info=True)
-                state["response"] = "I apologize, but I encountered an error processing your request."
+                logger.error(f"Error generating response: {str(e)}", exc_info=True)
+                state["response"] = "I apologize, but I encountered an error generating a response."
                 return state
         
         # Define the browser query enhancement node
@@ -285,19 +286,20 @@ class LangGraphService:
         
         return workflow.compile()
     
-    async def process_text(self, text: str) -> Dict[str, Any]:
+    async def process_text(self, text: str, voice: str = "af_heart") -> Dict[str, Any]:
         """
         Process the input text through the LangGraph workflow.
         
         Args:
             text: The text to process
+            voice: The voice to use for personalization (default: "af_heart")
             
         Returns:
             Dict containing the classification, response, and any browser results
         """
         try:
             # Initialize state with input text
-            initial_state = {"text": text}
+            initial_state = {"text": text, "voice": voice}
             
             # Run the graph
             final_state = await self.graph.ainvoke(initial_state)
@@ -335,15 +337,25 @@ class LangGraphService:
                 "response": "I apologize, but I encountered an error processing your request."
             }
     
-    async def _generate_response(self, text: str) -> str:
-        """Generate a response for the input text using the language model."""
-
+    async def _generate_response(self, text: str, voice: str = "af_heart") -> str:
+        """
+        Generate a response for the input text using the language model.
+        
+        Args:
+            text: The input text to generate a response for
+            voice: The voice to use for personalization (default: "af_heart")
+            
+        Returns:
+            str: The generated response
+        """
+        # Get the personality trait based on the voice
+        personality_trait = AssistantVoice.get_personality_trait(voice)
+        
         response = self.llm.invoke(
             [
-                {"role": "system", "content": "You are a helpful assistant. Your responses MUST be extremely brief and concise. Focus only on the most essential information. No explanations, no context, no elaboration. Just the direct answer."},
+                {"role": "system", "content": personality_trait},
                 {"role": "user", "content": text}
-            ],
-            max_tokens=20
+            ]
         )
         return response.content
     

@@ -47,8 +47,8 @@ async def begin_request(
     try:
         logger.info(f"Starting action for user {request.user}")
         
-        # Process the request using LangGraph service
-        result = await langgraph_service.process_text(request.request_message)
+        # Process the request using LangGraph service with voice personalization
+        result = await langgraph_service.process_text(request.request_message, request.voice)
         classification = result.get("classification", "normal_response")
         response = result.get("response", "")
         browser_input = result.get("browser_input", "")
