@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Application settings."""
     APP_NAME: str = "LLM Text Classifier API"
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    MODEL_NAME: str = "gpt-3.5-turbo"
+    OPENAI_MODEL: str = "gpt-3.5-turbo"
     
     class Config:
         env_file = ".env"
