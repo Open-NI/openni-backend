@@ -12,3 +12,4 @@ class ClassificationResponse(BaseModel):
     """Response model for text classification."""
     classification: ClassificationLabel
     response: Optional[str] = None
+    browser_input: Optional[str] = None
