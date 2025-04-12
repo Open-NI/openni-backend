@@ -3,7 +3,7 @@ from app.models.action_runner import ActionRunnerBeginRequest, ActionRunnerStatu
 from app.models.classification import ClassificationRequest, ClassificationResponse
 from app.services.langgraph_service import LangGraphService
 from app.services.mongodb_service import mongodb_service
-from app.routes.browser_use import handle_browser_use, BrowserUseRequest
+from app.services.browser_service import BrowserService
 from bson import ObjectId
 import logging
 from datetime import datetime
@@ -18,39 +18,16 @@ def get_langgraph_service():
     """Dependency injection for LangGraphService."""
     return LangGraphService()
 
-async def run_browser_task(action_id: str, request_message: str):
-    """Background task to handle browser use requests."""
-    try:
-        logger.info(f"Starting browser task for action {action_id}")
-        
-        # Update status to indicate browser task is starting
-        await mongodb_service.update_action_status(
-            action_id=action_id,
-            status="browser_task_started",
-            explanation="Starting browser automation..."
-        )
-        
-        browser_response = await handle_browser_use(BrowserUseRequest(prompt=request_message))
-        
-        logger.info(f"Browser task completed for action {action_id}")
-        await mongodb_service.update_action_status(
-            action_id=action_id,
-            status="completed",
-            result=browser_response.response
-        )
-    except Exception as e:
-        logger.error(f"Error in browser task for action {action_id}: {str(e)}")
-        await mongodb_service.update_action_status(
-            action_id=action_id,
-            status="failed",
-            error_message=str(e)
-        )
+def get_browser_service():
+    """Dependency injection for BrowserService."""
+    return BrowserService()
 
 @router.post("/begin", response_model=ActionRunnerBeginResponse)
 async def begin_request(
     request: ActionRunnerBeginRequest,
     background_tasks: BackgroundTasks,
-    langgraph_service: LangGraphService = Depends(get_langgraph_service)
+    langgraph_service: LangGraphService = Depends(get_langgraph_service),
+    browser_service: BrowserService = Depends(get_browser_service)
 ):
     """
     Begin the action runner process with the provided request.
@@ -59,6 +36,7 @@ async def begin_request(
         request: The action runner request
         background_tasks: FastAPI background tasks
         langgraph_service: The LangGraph service
+        browser_service: The Browser service
         
     Returns:
         ActionRunnerBeginResponse: The response with action ID and initial status
@@ -69,8 +47,14 @@ async def begin_request(
     try:
         logger.info(f"Starting action for user {request.user}")
         
-        # Get classification and response
-        classification, response = langgraph_service.classify_text(request.request_message)
+        # Process the request using LangGraph service
+        result = await langgraph_service.process_text(request.request_message)
+        classification = result.get("classification", "normal_response")
+        response = result.get("response", "")
+        browser_input = result.get("browser_input", "")
+        api_action = result.get("api_action")
+        api_params = result.get("api_params")
+        
         logger.info(f"Classification result: {classification}")
         
         # Create initial action record in MongoDB with all classification details
@@ -82,6 +66,9 @@ async def begin_request(
             "classification_details": {
                 "type": classification,
                 "response": response,
+                "browser_input": browser_input,
+                "api_action": api_action,
+                "api_params": api_params,
                 "timestamp": datetime.utcnow().isoformat()
             },
             "explanation": "Processing request..."
@@ -90,8 +77,8 @@ async def begin_request(
         action_id = await mongodb_service.create_action(action_data)
         logger.info(f"Created action with ID: {action_id}")
         
-        # If it's a normal response, we can complete it immediately
-        if classification == "normal_response" and response:
+        # Handle different classification types
+        if classification == "normal_response":
             logger.info(f"Completing normal response for action {action_id}")
             await mongodb_service.update_action_status(
                 action_id=action_id,
@@ -101,11 +88,82 @@ async def begin_request(
             )
             action_data["status"] = "completed"
             action_data["result"] = response
-        
-        # If it requires browser use, start a background task
+            
         elif classification == "browser_use":
             logger.info(f"Starting browser task for action {action_id}")
-            background_tasks.add_task(run_browser_task, action_id, request.request_message)
+            try:
+                # Update status to indicate browser task is starting
+                await mongodb_service.update_action_status(
+                    action_id=action_id,
+                    status="browser_task_started",
+                    explanation="Starting browser automation..."
+                )
+                
+                # Run browser task directly
+                browser_result = await browser_service.run_browser(browser_input or request.request_message)
+                print(f"Browser result: {browser_result}")
+                # Extract the result from the browser response
+                result_text = browser_result.get("result", "")
+                if not result_text and isinstance(browser_result, dict):
+                    # Try to extract from different possible locations in the response
+                    if "extracted_content" in browser_result:
+                        result_text = browser_result["extracted_content"]
+                    elif "final_result" in browser_result:
+                        result_text = browser_result["final_result"]
+                    elif "content" in browser_result:
+                        result_text = browser_result["content"]
+                
+                # If we still don't have a result, use a fallback
+                if not result_text:
+                    result_text = f"Browser task completed but no specific result was returned: {browser_input or request.request_message}"
+                
+                # Update status with browser result
+                await mongodb_service.update_action_status(
+                    action_id=action_id,
+                    status="completed",
+                    result=result_text,
+                    explanation="Browser task completed successfully"
+                )
+                action_data["status"] = "completed"
+                action_data["result"] = result_text
+                
+            except Exception as e:
+                logger.error(f"Error in browser task for action {action_id}: {str(e)}")
+                await mongodb_service.update_action_status(
+                    action_id=action_id,
+                    status="failed",
+                    error_message=str(e),
+                    explanation="Browser task failed"
+                )
+                action_data["status"] = "failed"
+                action_data["error_message"] = str(e)
+            
+        elif classification == "api_actions":
+            logger.info(f"Executing API action for action {action_id}")
+            try:
+                # Execute the API action
+                if api_action and api_action in API_ACTIONS:
+                    action_result = API_ACTIONS[api_action](**(api_params or {}))
+                    await mongodb_service.update_action_status(
+                        action_id=action_id,
+                        status="completed",
+                        result=str(action_result),
+                        explanation=f"API action {api_action} executed successfully"
+                    )
+                    action_data["status"] = "completed"
+                    action_data["result"] = str(action_result)
+                else:
+                    raise ValueError(f"Unknown API action: {api_action}")
+            except Exception as e:
+                logger.error(f"Error executing API action: {str(e)}")
+                await mongodb_service.update_action_status(
+                    action_id=action_id,
+                    status="failed",
+                    error_message=str(e),
+                    explanation=f"Failed to execute API action {api_action}"
+                )
+                action_data["status"] = "failed"
+                action_data["error_message"] = str(e)
         
         return ActionRunnerBeginResponse(
             classification=action_data["classification"],
@@ -114,7 +172,7 @@ async def begin_request(
             action_id=action_id
         )
     except Exception as e:
-        logger.error(f"Error in begin_request: {str(e)}")
+        logger.error(f"Error in begin_request: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/status/{action_id}", response_model=ActionRunnerStatusResponse)

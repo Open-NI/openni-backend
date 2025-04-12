@@ -51,6 +51,25 @@ class CustomBrowserPrompt(SystemPrompt):
     - For search tasks, return top results with titles, URLs, and snippets
     - For form submissions, confirm the submission was successful
     - For data extraction, ensure all required data is captured
+
+12. RESULT FORMATTING:
+    - ALWAYS structure your response in a clear, organized format
+    - For search results:
+      - Include a summary of findings at the top
+      - List results with clear headings and bullet points
+      - Include relevant URLs and timestamps
+      - Highlight key information in bold or quotes
+    - For data extraction:
+      - Present data in a structured format (tables, lists, etc.)
+      - Include source URLs and timestamps
+      - Clearly label all extracted information
+    - For form submissions:
+      - Confirm successful submission
+      - Include any confirmation numbers or reference IDs
+      - Note any follow-up actions required
+    - ALWAYS end with a clear conclusion or summary
+    - If no specific data is found, explicitly state that
+    - Never return raw HTML or unformatted text
 """
         
         return f"{existing_rules}\n{custom_rules}"
