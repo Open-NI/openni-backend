@@ -11,8 +11,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    MODEL_NAME: str = "gpt-3.5-turbo"
-    
+    MODEL_NAME: str = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+
+
     class Config:
         env_file = ".env"
 
