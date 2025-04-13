@@ -147,7 +147,7 @@ class LangGraphService:
             If the request requires searching the web, classify it as "browser_use" and return the relevant "search query" to be used for the browser, effective for web searching.
             - Make the query more explicit and search-friendly
             - Keep the core meaning of the original query
-            - DO NOT add any explanations or additional text, dates or years, instead use relative terms like "current", "latest", "next week", "last month", etc.
+            - DO NOT add any explanations or additional text to the "search query", dates or years, instead use relative terms like "current", "latest", "next week", "last month", etc.
             
             Return your classification as a JSON object with the following structure:
             {{

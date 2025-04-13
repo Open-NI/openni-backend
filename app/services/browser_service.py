@@ -155,7 +155,7 @@ class BrowserService:
                 browser=self.browser,  # Use the configured Brave browser
                 system_prompt_class=CustomBrowserPrompt,  # Use our custom system prompt
                 use_vision=False,
-                register_new_step_callback=update_progress_callback,  # Register the callback for each step
+                #register_new_step_callback=update_progress_callback,  # Register the callback for each step
                 #browser_context=browser_context
             )
             
