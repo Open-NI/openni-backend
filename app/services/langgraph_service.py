@@ -8,7 +8,6 @@ from app.models.assistant import AssistantVoice
 from fastapi import HTTPException
 import logging
 import json
-import re
 from app.services.browser_service import BrowserService
 from enum import Enum
 import requests
