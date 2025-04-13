@@ -186,10 +186,16 @@ async def begin_request(
             try:
                 # Execute the API action
                 if api_action and api_action in API_ACTION_HANDLERS:
+                    if api_action == "MEME_CAPTION":
+                        api_params = { "text": request.request_message }
+
+                    print(f"API action: {api_action} with params: {api_params}")
                     action_result = API_ACTION_HANDLERS[api_action](
-                        **(api_params or {})
+                        api_params
                     )
                     result_text = str(action_result)
+
+                    print(f"Result text: {result_text}")
 
                     audio_data = render_text_to_speech(response, request.voice)
                     action_data["tts_audio_base64"] = audio_data

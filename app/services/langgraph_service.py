@@ -11,6 +11,7 @@ import json
 import re
 from app.services.browser_service import BrowserService
 from enum import Enum
+import requests
 
 # Configure logging
 logging.basicConfig(
@@ -31,6 +32,7 @@ class ApiAction(Enum):
     """Available API actions that can be performed by the system."""
     NONE = "none"  # No API action needed
     GET_CURRENT_DATETIME = "GET_CURRENT_DATETIME"  # Get current date and time
+    MEME_CAPTION = "MEME_CAPTION"  # Generate meme captions
 
 # Define API action handler functions
 def get_current_datetime(params=None):
@@ -39,9 +41,70 @@ def get_current_datetime(params=None):
     current_datetime = datetime.now()
     return f"The current date and time is: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}"
 
+def generate_meme_caption(params=None):
+    """Generate meme captions based on user request."""
+    if not params or "text" not in params:
+        return "Please provide text for the meme caption."
+    
+    logger.debug(f"Generating meme caption for: {params['text']}")
+
+    # Available meme templates
+    meme_templates = {
+        "217743513": "Uno draw cards",
+        "181913649": "Drake hotline bling",
+        "129242436": "Change My Mind",
+        "188390779": "Woman Yelling At Cat",
+        "224015000": "Bernie Sanders Once Again Asking",
+        "77045868": "Pawn Stars Best I Can Do"
+    }
+    
+    # Use LLM to determine the best meme template and generate captions
+    prompt = f"""Based on the following text, select the most appropriate meme template and generate captions for it.
+    Text: {params['text']}
+    
+    Available templates:
+    {json.dumps(meme_templates, indent=2)}
+    
+    Return a JSON object with:
+    - template_id: The ID of the chosen template
+    - top_text: The text for the top of the meme
+    - bottom_text: The text for the bottom of the meme
+    
+    Make the captions funny and relevant to the input text."""
+    
+    response = ChatOpenAI(model='gpt-3.5-turbo').invoke(prompt)
+    
+    try:
+        result = json.loads(response.content)
+        
+        # Call the Imgflip API to generate the meme
+        api_url = "https://api.imgflip.com/caption_image"
+        api_params = {
+            "username": "mk1340",
+            "password": "fortnite123",
+            "template_id": result["template_id"],
+            "text0": result["top_text"],
+            "text1": result["bottom_text"]
+        }
+        
+        api_response = requests.post(api_url, data=api_params)
+        api_data = api_response.json()
+        
+        if api_data["success"]:
+            return api_data["data"]["url"]
+        else:
+            return f"Failed to generate meme: {api_data['error_message']}"
+            
+    except json.JSONDecodeError:
+        return "Failed to generate meme captions."
+    except Exception as e:
+        logger.error(f"Error generating meme: {str(e)}")
+        return f"Error generating meme: {str(e)}"
+
 # Dictionary mapping API actions to their handler functions
 API_ACTION_HANDLERS = {
-    "GET_CURRENT_DATETIME": get_current_datetime
+    "GET_CURRENT_DATETIME": get_current_datetime,
+    "MEME_CAPTION": generate_meme_caption
 }
 
 # Define the state schema
@@ -74,13 +137,18 @@ class LangGraphService:
             1. "api_action" - The request requires using one of our API actions
             2. "normal_response" - The request can be answered directly without external tools
             3. "browser_use" - The request requires searching the web for information
+
+            Under no circustances whatsoever should you return anything else besides one of these 3 options.
             
             Available API actions:
             {api_actions}
 
             If the request matches one of the API actions, classify it as "api_action" and specify which action to use.
             If the request can be answered directly, classify it as "normal_response".
-            If the request requires searching the web, classify it as "browser_use".
+            If the request requires searching the web, classify it as "browser_use" and return the relevant "search query" to be used for the browser, effective for web searching.
+            - Make the query more explicit and search-friendly
+            - Keep the core meaning of the original query
+            - DO NOT add any explanations or additional text, dates or years, instead use relative terms like "current", "latest", "next week", "last month", etc.
             
             Return your classification as a JSON object with the following structure:
             {{
@@ -89,8 +157,48 @@ class LangGraphService:
                 "api_params": {{param1: value1, ...}} | null,
                 "browser_input": "search query" | null
             }}
+
+Example: User: "I feel depressed. I want to go for a trip somewhere away for vacation".
+              (User is implying you should book a flight for them, but did not specify which airline, date or location, so before  performing an action, ask him about specifics.)
+         Response:
+
+             {{
+                "classification": "normal_response" ,
+                "api_action": null,
+                "api_params": null,
+                "browser_input": null
+            }} 
+
+        User: "Somewhere sunny, far away from Slovenia."
+
+        Response: 
+
+             {{
+                "classification": "browser_use" ,
+                "api_action": null,
+                "api_params": null,
+                "browser_input": "Book a flight next week from Ljubljana to Bangkok."
+            }} 
+
+
+Example: User: "I dont feel so good, I'm unemployed."
+              (User is implying he is unemployed so you should help him find a job, but you dont know his skillset or prior work experience.)
+           Response:   {{
+                "classification": "normal_response" ,
+                "api_action": null,
+                "api_params": null,
+                "browser_input": null
+            }}
+            User: "Im a spring developer"
+
+            Response   {{
+                "classification": "browser_use" ,
+                "api_action": null,
+                "api_params": null,
+                "browser_input": "Search Linkedin for Spring developer jobs and apply to them. Write messages to people who are hiring."
+            }} 
             
-            IMPORTANT: Return ONLY the JSON object without any markdown formatting, code blocks, or additional text.
+IMPORTANT: Return ONLY the JSON object without any markdown formatting, code blocks, or additional text.
             """),
             ("human", "{text}")
         ])
@@ -99,7 +207,6 @@ class LangGraphService:
         self.response_prompt = ChatPromptTemplate.from_messages([
             ("system", """You are a helpful assistant. Provide a clear, informative, and helpful response to the user's query.
             Be concise but thorough. If you don't know something, say so rather than making up information.
-
             """),
             ("human", "{text}")
         ])
@@ -111,7 +218,7 @@ class LangGraphService:
             - Include important keywords
             - Make the query more explicit and search-friendly
             - Keep the core meaning of the original query
-            - Don't add any explanations or additional text, just return the enhanced query
+            - DO NOT add any explanations or additional text, dates or years, instead use relative terms like "current", "latest", "next week", "last month", etc.
             
             If you encounter a login popup or paywall during the search, end the search immediately and return a message indicating that the content requires authentication.
             
@@ -120,7 +227,7 @@ class LangGraphService:
             Output: "current weather forecast London UK temperature precipitation"
             
             Input: "latest iPhone price"
-            Output: "iPhone 15 Pro Max current retail price US market 2024"
+            Output: "iPhone 15 Pro Max current retail price US market"
             
             """),
             ("human", "{text}")
@@ -143,6 +250,7 @@ class LangGraphService:
                     text=text,
                     api_actions="\n".join([f"- {action.name}: {action.value}" for action in ApiAction])
                 )
+                print(messages)
                 response = self.llm.invoke(messages)
                 
                 # Parse the JSON response
@@ -174,7 +282,11 @@ class LangGraphService:
                     # If this is an API action, execute it directly here
                     if state["classification"] == "api_actions" and state["api_action"]:
                         api_action = state["api_action"]
-                        api_params = state["api_params"] or {}
+
+                        if api_action == "MEME_CAPTION":
+                            api_params = { "text": text }
+                        else:
+                            api_params = state["api_params"] or {}
                         
                         # Log the API action and parameters
                         logger.debug(f"Executing API action: {api_action} with parameters: {api_params}")
@@ -363,7 +475,7 @@ class LangGraphService:
                 {"role": "user", "content": text}
             ]
         )
-        
+
         CONVERSATION_HISTORY.append({"role": "user", "content": text})
         CONVERSATION_HISTORY.append({"role": "assistant", "content": response.content})
         return response.content
@@ -383,7 +495,7 @@ class LangGraphService:
         - Include important keywords
         - Make the query more explicit and search-friendly
         - Keep the core meaning of the original query
-        - Don't add any explanations or additional text, dates, just return the enhanced query
+        - Don't add any explanations or additional text, dates, years, just return the enhanced query
         
         Example:
         Input: "weather in London"

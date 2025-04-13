@@ -84,7 +84,7 @@ class BrowserService:
             return
             
         try:
-            browser_path = os.getenv("BROWSER_PATH")
+            browser_path = os.getenv("BROWSER_PATH", "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser")
 
             if not browser_path or len(browser_path) == 0:
                 # Configure browser based on operating system
@@ -125,7 +125,8 @@ class BrowserService:
                 await self.initialize()
             
             #browser_context = BrowserContextConfig(
-            #    browser_window_size={'width': 1920, 'height': 1080}
+                #viewport_expansion=1000,
+                trace_path="./trace.json"
             #)
             # Create the agent with the task and retry delay
             self.agent = Agent(
