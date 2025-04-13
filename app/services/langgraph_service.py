@@ -144,7 +144,7 @@ class LangGraphService:
 
             If the request matches one of the API actions, classify it as "api_action" and specify which action to use.
             If the request can be answered directly, classify it as "normal_response".
-            If the request requires searching and or requesting web actions, classify it as "browser_use" and return the relevant "search query" to be used for the browser, effective for web searching.
+            If the request requires searching and or requesting web actions or opening a browser, classify it as "browser_use" and return the relevant "search query" to be used for the browser, effective for web searching.
             - Make the query more explicit and search-friendly
             - Keep the core meaning of the original query
             - DO NOT add any explanations or additional text to the "search query", dates or years, instead use relative terms like "current", "latest", "next week", "last month", etc.
