@@ -1,5 +1,5 @@
 import os
-from browser_use import Agent, Browser, BrowserConfig, SystemPrompt
+from browser_use import Agent, Browser, BrowserConfig, BrowserContextConfig, SystemPrompt
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 import logging
@@ -34,7 +34,6 @@ class CustomBrowserPrompt(SystemPrompt):
    - ALWAYS use the top search bar for searching when appropriate
    - Type queries directly into the search bar and press Enter
    - For non-search tasks, navigate directly to relevant websites
-   - Use keyboard shortcuts when possible (Ctrl+L for address bar, Enter to submit)
    - Minimize unnecessary clicks and interactions
 
 10. MODAL HANDLING:
@@ -45,14 +44,7 @@ class CustomBrowserPrompt(SystemPrompt):
       - If modal persists, try pressing Escape key
       - Continue with the task after dismissing modals
 
-11. TASK COMPLETION:
-    - Always verify that the task has been completed successfully
-    - Extract and return relevant information as requested
-    - For search tasks, return top results with titles, URLs, and snippets
-    - For form submissions, confirm the submission was successful
-    - For data extraction, ensure all required data is captured
-
-12. RESULT FORMATTING:
+11. RESULT FORMATTING:
     - ALWAYS structure your response in a clear, organized format
     - For search results:
       - Include a summary of findings at the top
@@ -104,7 +96,7 @@ class BrowserService:
             # Create browser configuration
             self.browser = Browser(
                 config=BrowserConfig(
-                    chrome_instance_path=brave_path
+                    chrome_instance_path=brave_path,
                 )
             )
             
@@ -129,6 +121,9 @@ class BrowserService:
             if not self.is_initialized:
                 await self.initialize()
             
+            #browser_context = BrowserContextConfig(
+            #    browser_window_size={'width': 1920, 'height': 1080}
+            #)
             # Create the agent with the task and retry delay
             self.agent = Agent(
                 task=task,
@@ -137,7 +132,8 @@ class BrowserService:
                 retry_delay=self.retry_delay,  # Add delay between retries
                 browser=self.browser,  # Use the configured Brave browser
                 system_prompt_class=CustomBrowserPrompt,  # Use our custom system prompt
-                use_vision=False
+                use_vision=False,
+                #browser_context=browser_context
             )
             
             # Run the agent and get results
@@ -179,6 +175,7 @@ class BrowserService:
                 result = f"Task completed but no specific result was returned: {task}"
                 logger.debug("Created fallback result")
             
+            await self.close()
             # Return the result
             return {
                 "task": task,

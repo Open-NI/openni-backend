@@ -23,6 +23,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Explicitly set the logger level to DEBUG
 
+# Global variable to store conversation history
+CONVERSATION_HISTORY = []
+
 # Define API actions as an enum
 class ApiAction(Enum):
     """Available API actions that can be performed by the system."""
@@ -60,6 +63,8 @@ class LangGraphService:
         """Initialize the LangGraph service."""
         self.llm = ChatOpenAI(model='gpt-4o')
         self.browser_service = BrowserService()
+
+        self.history_state = []
         
         # Classification prompt
         self.classification_prompt = ChatPromptTemplate.from_messages([
@@ -354,9 +359,13 @@ class LangGraphService:
         response = self.llm.invoke(
             [
                 {"role": "system", "content": personality_trait},
+                *CONVERSATION_HISTORY,
                 {"role": "user", "content": text}
             ]
         )
+        
+        CONVERSATION_HISTORY.append({"role": "user", "content": text})
+        CONVERSATION_HISTORY.append({"role": "assistant", "content": response.content})
         return response.content
     
     def _generate_browser_input(self, text: str) -> str:
@@ -374,14 +383,14 @@ class LangGraphService:
         - Include important keywords
         - Make the query more explicit and search-friendly
         - Keep the core meaning of the original query
-        - Don't add any explanations or additional text, just return the enhanced query
+        - Don't add any explanations or additional text, dates, just return the enhanced query
         
         Example:
         Input: "weather in London"
         Output: "current weather forecast London UK temperature precipitation"
         
         Input: "latest iPhone price"
-        Output: "iPhone 15 Pro Max current retail price US market 2024"
+        Output: "iPhone 15 Pro Max current retail price US market"
         """
         
         response = self.llm.invoke([

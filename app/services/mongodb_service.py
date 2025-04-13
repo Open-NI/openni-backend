@@ -54,6 +54,8 @@ class MongoDBService:
         if isinstance(action_id, str):
             try:
                 action_id = ObjectId(action_id)
+            except Exception:
+                return None
                 
         update_data = {
             "status": status,
