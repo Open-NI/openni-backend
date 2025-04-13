@@ -5,7 +5,7 @@ from app.models.action_runner import (
     ActionRunnerBeginResponse,
 )
 from app.models.classification import ClassificationRequest, ClassificationResponse
-from app.services.langgraph_service import LangGraphService, API_ACTION_HANDLERS
+from app.services.langgraph_service import LangGraphService, API_ACTION_HANDLERS, CONVERSATION_HISTORY
 from app.services.mongodb_service import mongodb_service
 from app.services.browser_service import BrowserService
 from app.routes.human import text_to_speech
@@ -156,6 +156,9 @@ async def begin_request(
                 audio_data = render_text_to_speech(result_text, request.voice)
                 action_data["tts_audio_base64"] = audio_data
 
+                # Add the result to the global conversation history
+                CONVERSATION_HISTORY.append({"role": "assistant", "content": result_text})
+                
                 # Update status with browser result
                 await mongodb_service.update_action_status(
                     action_id=action_id,
