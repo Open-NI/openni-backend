@@ -38,7 +38,7 @@ def get_current_datetime(params=None):
     """Get the current date and time."""
     from datetime import datetime
     current_datetime = datetime.now()
-    return f"The current date and time is {current_datetime.strftime('%A, %B %-d, %Y a\t %-I:%M %p')}."
+    return f"The current date and time is {current_datetime.strftime('%A, %B %-d, %Y at %-I:%M %p')}."
 
 def generate_meme_caption(params=None):
     """Generate meme captions based on user request."""
