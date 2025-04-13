@@ -26,3 +26,4 @@ class ActionRunnerStatusResponse(BaseModel):
     result: Optional[str] = None
     error_message: Optional[str] = None
     tts_audio_base64: Optional[str] = None
+    screenshot: Optional[str] = None

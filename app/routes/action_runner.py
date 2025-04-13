@@ -133,7 +133,7 @@ async def begin_request(
 
                 # Run browser task directly
                 browser_result = await browser_service.run_browser(
-                    browser_input or request.request_message
+                    browser_input or request.request_message, action_id
                 )
                 print(f"Browser result: {browser_result}")
                 
@@ -237,12 +237,13 @@ async def begin_request(
 
 
 @router.get("/status/{action_id}", response_model=ActionRunnerStatusResponse)
-async def get_status(action_id: str):
+async def get_status(action_id: str, return_screenshot: bool = False):
     """
     Get the status of the action runner process.
 
     Args:
         action_id: The ID of the action runner process
+        return_screenshot: Whether to return the screenshot (default: False)
 
     Returns:
         ActionRunnerStatusResponse: The status of the action runner process
@@ -266,6 +267,7 @@ async def get_status(action_id: str):
             result=action.get("result"),
             error_message=action.get("error_message"),
             tts_audio_base64=action.get("tts_audio_base64"),
+            screenshot=action.get("screenshot") if return_screenshot else None,
         )
     except HTTPException:
         raise

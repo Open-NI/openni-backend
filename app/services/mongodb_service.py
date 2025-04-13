@@ -48,6 +48,7 @@ class MongoDBService:
         explanation: Optional[str] = None,
         classification_details: Optional[Dict[str, Any]] = None,
         tts_audio_base64: Optional[str] = None,
+        screenshot: Optional[str] = None,
     ):
         """Update the status of an action."""
         # Convert string ID to ObjectId if needed
@@ -71,6 +72,8 @@ class MongoDBService:
             update_data["classification_details"] = classification_details
         if tts_audio_base64 is not None:
             update_data["tts_audio_base64"] = tts_audio_base64
+        if screenshot is not None:
+            update_data["screenshot"] = screenshot
 
         await self.actions.update_one(
             {"_id": action_id},
