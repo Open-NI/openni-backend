@@ -42,6 +42,11 @@ class TextToSpeech:
             # Concatenate all audio chunks
             full_audio = np.concatenate(audio_chunks)
 
+            # Make the audio a bit louder in case of voice af_michael
+            if voice == 'am_michael':
+                full_audio *= 1.2
+            full_audio = np.clip(full_audio, -1.0, 1.0)  # Ensure audio is in valid range
+
             # Convert to WAV bytes
             buffer = io.BytesIO()
             import soundfile as sf
