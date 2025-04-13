@@ -27,7 +27,7 @@ app/
 
 ## Setup
 
-1. Create a virtual environment:
+1. Create a virtual environment (Python 3.12 is recommended, 3.13 is not yet supported):
 ```bash
 python3 -m venv venv
 ```

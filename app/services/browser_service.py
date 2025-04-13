@@ -7,8 +7,12 @@ import asyncio
 from typing import Dict, Any, Optional
 import platform
 from app.core.config import settings
+from browser_use.browser.views import BrowserState
+from browser_use.agent.views import AgentOutput
 
 from pydantic import SecretStr
+
+from app.services.mongodb_service import mongodb_service
 
 # Configure logging
 logging.basicConfig(
@@ -109,7 +113,7 @@ class BrowserService:
             logger.error(f"Error initializing browser: {str(e)}", exc_info=True)
             raise
     
-    async def run_browser(self, task: str) -> Dict[str, Any]:
+    async def run_browser(self, task: str, action_id: str = None) -> Dict[str, Any]:
         """
         Run a browser task with the given description using browser-use
         
@@ -127,6 +131,20 @@ class BrowserService:
             #browser_context = BrowserContextConfig(
             #    browser_window_size={'width': 1920, 'height': 1080}
             #)
+
+            async def update_progress_callback(
+                state: BrowserState, model_output: AgentOutput, steps
+            ):
+                try:
+                    if action_id:
+                        print(f"Updating screenshot and explanation for action ID: {action_id}. Next goal: {model_output.current_state.next_goal}")
+                        screenshot = state.screenshot
+                        explanation = model_output.current_state.next_goal
+
+                        # await mongodb_service.update_action_status(action_id, status="browser_task_started", screenshot=screenshot, explanation=explanation)
+                except Exception as e:
+                    print(f"Error updating action state: {str(e)}", exc_info=True)
+
             # Create the agent with the task and retry delay
             self.agent = Agent(
                 task=task,
@@ -136,6 +154,7 @@ class BrowserService:
                 browser=self.browser,  # Use the configured Brave browser
                 system_prompt_class=CustomBrowserPrompt,  # Use our custom system prompt
                 use_vision=False,
+                register_new_step_callback=update_progress_callback,  # Register the callback for each step
                 #browser_context=browser_context
             )
             
