@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     
+    BROWSER_PATH: str = os.getenv("BROWSER_PATH", None)
+
     class Config:
         env_file = ".env"
 
