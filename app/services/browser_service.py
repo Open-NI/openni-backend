@@ -53,7 +53,7 @@ class CustomBrowserPrompt(SystemPrompt):
     - For search results:
       - Include a summary of findings at the top
       - List results with clear headings and bullet points
-      - Include relevant URLs and timestamps
+      - Include the source URLs and timestamps
       - Highlight key information in bold or quotes
     - For data extraction:
       - Present data in a structured format (tables, lists, etc.)
@@ -66,6 +66,9 @@ class CustomBrowserPrompt(SystemPrompt):
     - ALWAYS end with a clear conclusion or summary
     - If no specific data is found, explicitly state that
     - Never return raw HTML or unformatted text
+
+12. If there is data requested with keywords "find", "list", "get", "tell" or similar, you should use the browser to find the data and return it in a structured format always.
+
 """
         
         return f"{existing_rules}\n{custom_rules}"
