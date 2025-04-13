@@ -53,7 +53,7 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 Start the server:
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --host 0.0.0.0
 ```
 
 The API will be available at `http://localhost:8000`
